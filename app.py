@@ -87,33 +87,33 @@ with st.sidebar:
     "student_id", st.session_state.student_id
 ).execute()
 
-if data.data:
-    log = data.data
-    categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
-    scores = {cat: 100 for cat in categories}
-    for entry in log:
-        kp = entry["knowledge_point"]
-        if kp in scores:
-            scores[kp] = max(0, scores[kp] - 15)
-    
-    values = [scores[cat] for cat in categories]
-    angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-    values += values[:1]
-    angles += angles[:1]
-    
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    ax.plot(angles, values, 'o-', linewidth=2)
-    ax.fill(angles, values, alpha=0.25)
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(categories)
-    ax.set_ylim(0, 100)
-    plt.title("学情诊断雷达图")
-    plt.savefig("radar.png")
-    st.image("radar.png")
-    weakest = min(scores, key=scores.get)
-    st.warning(f"建议优先巩固：{weakest}")
-else:
-    st.info("暂无学习记录，快去问问题吧")
+    if data.data:
+        log = data.data
+        categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
+        scores = {cat: 100 for cat in categories}
+        for entry in log:
+            kp = entry["knowledge_point"]
+            if kp in scores:
+                scores[kp] = max(0, scores[kp] - 15)
+        
+        values = [scores[cat] for cat in categories]
+        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+        values += values[:1]
+        angles += angles[:1]
+        
+        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+        ax.plot(angles, values, 'o-', linewidth=2)
+        ax.fill(angles, values, alpha=0.25)
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(categories)
+        ax.set_ylim(0, 100)
+        plt.title("学情诊断雷达图")
+        plt.savefig("radar.png")
+        st.image("radar.png")
+        weakest = min(scores, key=scores.get)
+        st.warning(f"建议优先巩固：{weakest}")
+    else:
+        st.info("暂无学习记录，快去问问题吧")
 
 # 主聊天区
 if "messages" not in st.session_state:
