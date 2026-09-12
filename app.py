@@ -65,6 +65,7 @@ def record_weakness(knowledge_point, error_type):
 # ================= 4. 网页界面 =================
 st.set_page_config(page_title="CAD AI伴学", layout="wide")
 st.title("《建筑工程CAD》AI伴学智能体")
+
 # 从链接里读学号
 query_params = st.query_params
 if "student_id" in query_params:
@@ -82,38 +83,41 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
 # 侧边栏：雷达图
 with st.sidebar:
     st.header("学情诊断")
+    
     if st.button("刷新诊断报告"):
-        data = supabase.table("weakness_log").select("knowledge_point").eq(
-    "student_id", st.session_state.student_id
-).execute()
+        # 注意：这里从 Supabase 读取数据，整段都缩进在 if st.button 里面
+        data = supabase.table("weakness_log").select("knowledge_point").eq("student_id", st.session_state.student_id).execute()
 
-    if data.data:
-        log = data.data
-        categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
-        scores = {cat: 100 for cat in categories}
-        for entry in log:
-            kp = entry["knowledge_point"]
-            if kp in scores:
-                scores[kp] = max(0, scores[kp] - 15)
-        
-        values = [scores[cat] for cat in categories]
-        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-        values += values[:1]
-        angles += angles[:1]
-        
-        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-        ax.plot(angles, values, 'o-', linewidth=2)
-        ax.fill(angles, values, alpha=0.25)
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(categories)
-        ax.set_ylim(0, 100)
-        plt.title("学情诊断雷达图")
-        plt.savefig("radar.png")
-        st.image("radar.png")
-        weakest = min(scores, key=scores.get)
-        st.warning(f"建议优先巩固：{weakest}")
-    else:
-        st.info("暂无学习记录，快去问问题吧")
+        # 注意：这里的 if 要和上面 data = ... 对齐，不能跑到按钮外面去
+        if data.data:
+            log = data.data
+            categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
+            scores = {cat: 100 for cat in categories}
+            
+            for entry in log:
+                kp = entry["knowledge_point"]
+                if kp in scores:
+                    scores[kp] = max(0, scores[kp] - 15)
+            
+            values = [scores[cat] for cat in categories]
+            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+            
+            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+            ax.plot(angles, values, 'o-', linewidth=2)
+            ax.fill(angles, values, alpha=0.25)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(categories)
+            ax.set_ylim(0, 100)
+            plt.title("学情诊断雷达图")
+            plt.savefig("radar.png")
+            st.image("radar.png")
+            
+            weakest = min(scores, key=scores.get)
+            st.warning(f"建议优先巩固：{weakest}")
+        else:
+            st.info("暂无学习记录，快去问问题吧")
 
 # 主聊天区
 if "messages" not in st.session_state:
