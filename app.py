@@ -114,8 +114,8 @@ if data.data:
     st.image("radar.png")
     weakest = min(scores, key=scores.get)
     st.warning(f"建议优先巩固：{weakest}")
-        else:
-            st.info("暂无学习记录，快去问问题吧")
+    else:
+        st.info("暂无学习记录，快去问问题吧")
 
 # 主聊天区
 if "messages" not in st.session_state:
