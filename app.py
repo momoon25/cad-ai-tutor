@@ -1,3 +1,5 @@
+import matplotlib
+from matplotlib import font_manager
 import streamlit as st
 from openai import OpenAI
 from supabase import create_client
@@ -108,7 +110,9 @@ with st.sidebar:
             ax.plot(angles, values, 'o-', linewidth=2)
             ax.fill(angles, values, alpha=0.25)
             ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(categories)
+            font_path = "SourceHanSansCN-Regular.otf"  # 如果你上传的是其他名字，请改这里
+            font_prop = font_manager.FontProperties(fname=font_path)
+            ax.set_xticklabels(categories, fontproperties=font_prop)
             ax.set_ylim(0, 100)
             plt.title("学情诊断雷达图")
             plt.savefig("radar.png")
