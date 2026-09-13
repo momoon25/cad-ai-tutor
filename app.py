@@ -172,17 +172,16 @@ with st.sidebar:
         angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
         values += values[:1]
         angles += angles[:1]
-        
+        import os
+font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "SourceHanSansCN-Regular.otf")
+font_prop = font_manager.FontProperties(fname=font_path)
         fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
         ax.plot(angles, values, 'o-', linewidth=2)
         ax.fill(angles, values, alpha=0.25)
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(categories)
+        ax.set_xticklabels(categories, fontproperties=font_prop)
         ax.set_ylim(0, 100)
         
-        # 如果你上传了字体文件，这行一定要保留
-        font_path = "SourceHanSansCN-Regular.otf"
-        font_prop = font_manager.FontProperties(fname=font_path)
         plt.title("学情诊断雷达图", fontproperties=font_prop, pad=25, fontsize=14)
         
         plt.savefig("radar.png")
