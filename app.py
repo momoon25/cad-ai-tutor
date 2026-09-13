@@ -160,7 +160,23 @@ with st.sidebar:
     if st.session_state.get("my_log"):
         log = st.session_state.my_log  # 从会话记忆里拿数据，不怕页面重跑
         
-        # 1. 画雷达图
+               # 1. 画雷达图（全局注册中文字体，最稳健方案）
+        import os
+        import matplotlib.pyplot as plt
+        from matplotlib import font_manager
+        
+        # 动态获取字体文件的绝对路径（确保云端能找到）
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        font_path = os.path.join(current_dir, "SourceHanSansCN-Regular.otf")
+        
+        # 将字体注入到 Matplotlib 的全局字体管理器中
+        font_manager.fontManager.addfont(font_path)
+        # 获取字体的真实名称并设置为默认字体
+        font_name = font_manager.FontProperties(fname=font_path).get_name()
+        plt.rcParams['font.sans-serif'] = [font_name]
+        plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示方块的问题
+        
+        # 绘制雷达图
         categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
         scores = {cat: 100 for cat in categories}
         for entry in log:
@@ -172,18 +188,15 @@ with st.sidebar:
         angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
         values += values[:1]
         angles += angles[:1]
-        import os
-font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "SourceHanSansCN-Regular.otf")
-font_prop = font_manager.FontProperties(fname=font_path)
-fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+        
+        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
         ax.plot(angles, values, 'o-', linewidth=2)
         ax.fill(angles, values, alpha=0.25)
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(categories, fontproperties=font_prop)
+        ax.set_xticklabels(categories)  # 这里不用加 fontproperties 了，全局已生效
         ax.set_ylim(0, 100)
         
-        plt.title("学情诊断雷达图", fontproperties=font_prop, pad=25, fontsize=14)
-        
+        plt.title("学情诊断雷达图", pad=25, fontsize=14)
         plt.savefig("radar.png")
         st.image("radar.png")
         
