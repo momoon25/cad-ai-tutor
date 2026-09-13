@@ -75,13 +75,35 @@ if "student_id" in query_params:
 
 # 如果没学号，就让学生输入学号和姓名
 if "student_id" not in st.session_state or not st.session_state.student_id:
-    st.info("👋 欢迎来到《建筑工程CAD》AI伴学空间！")
+    # 1. 欢迎引导语
+    st.markdown("<h2 style='text-align: center;'>👋 欢迎来到《建筑工程CAD》AI伴学空间！</h2>", unsafe_allow_html=True)
+    st.info("我是你的专属CAD伴学小助手，可以为你解答中望建筑版CAD的操作问题、自动记录你的薄弱点，并为你生成专属学情诊断报告。")
+    
+    # 2. 头像选择
+    st.write("**第一步：选一个属于你的头像吧**")
+    avatar_options = ["👨‍🎓", "👩‍🎓", "👷", "👷‍♀️", "🧑‍💻"]
+    selected_avatar = st.radio("选择头像", avatar_options, horizontal=True, label_visibility="collapsed")
+    
+    # 3. 学号和姓名输入
+    st.write("**第二步：输入你的学号和姓名**")
     student_id = st.text_input("请输入你的学号")
     student_name = st.text_input("请输入你的姓名（中文即可）")
+    
+    # 4. 示例提问引导（折叠面板）
+    with st.expander("💡 不知道怎么问？点这里看看示例吧"):
+        st.markdown("""
+        - 轴网标注一键生成的命令怎么用？
+        - 我画墙体时总是断开对不上，怎么办？
+        - 图层锁定了怎么解锁？
+        - 尺寸标注的样式怎么统一修改？
+        """)
+    
+    # 5. 进入系统
     if st.button("进入系统"):
         if student_id and student_name:
             st.session_state.student_id = student_id
             st.session_state.student_name = student_name
+            st.session_state.avatar = selected_avatar  # 把选的头像存起来，后面聊天界面会用到
             st.query_params["student_id"] = student_id
             st.rerun()
         else:
