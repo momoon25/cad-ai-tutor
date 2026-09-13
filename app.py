@@ -148,55 +148,65 @@ with st.sidebar:
     elif teacher_pwd:
         st.error("密码错误")
     # ============================================   
+        # 数据加载区：点击后把数据存入 session_state
     if st.button("刷新诊断报告"):
-        # 注意：这里从 Supabase 读取数据，整段都缩进在 if st.button 里面
         data = supabase.table("weakness_log").select("knowledge_point").eq("student_id", st.session_state.student_id).execute()
-
-        # 注意：这里的 if 要和上面 data = ... 对齐，不能跑到按钮外面去
         if data.data:
-            log = data.data
-            categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
-            scores = {cat: 100 for cat in categories}
-            
-            for entry in log:
-                kp = entry["knowledge_point"]
-                if kp in scores:
-                    scores[kp] = max(0, scores[kp] - 15)
-            
-            values = [scores[cat] for cat in categories]
-            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-            values += values[:1]
-            angles += angles[:1]
-            
-            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-            ax.plot(angles, values, 'o-', linewidth=2)
-            ax.fill(angles, values, alpha=0.25)
-            ax.set_xticks(angles[:-1])
-            font_path = "SourceHanSansCN-Regular.otf"  # 如果你上传的是其他名字，请改这里
-            font_prop = font_manager.FontProperties(fname=font_path)
-            ax.set_xticklabels(categories, fontproperties=font_prop)
-            ax.set_ylim(0, 100)
-            plt.title("学情诊断雷达图", fontproperties=font_prop, pad=25, fontsize=14)
-            plt.savefig("radar.png")
-            st.image("radar.png")
-            
-            weakest = min(scores, key=scores.get)
-            st.warning(f"建议优先巩固：{weakest}")
-            
-            # ↓↓↓↓↓ 加在这里，缩进必须和 st.warning 一模一样 ↓↓↓↓↓
-            if st.button("🤖 获取我的专属学习建议"):
-                with st.spinner("AI正在为你分析..."):
-                    record_text = "、".join([entry["knowledge_point"] for entry in log])
-                    prompt = f"你是一个亲切幽默的CAD课程助教。学生{st.session_state.get('student_name', '同学')}最近在以下知识点遇到了困难：{record_text}。请用鼓励、轻松的语气，给学生写一段100字左右的加油打气和学习建议。"
-                    response = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[{"role": "user", "content": prompt}]
-                    )
-                    st.success(response.choices[0].message.content)
-            # ↑↑↑↑↑ 加到这里结束 ↑↑↑↑↑
-
+            st.session_state.my_log = data.data  # 存入会话记忆
         else:
+            st.session_state.my_log = []  # 没数据就存个空列表
+
+    # 显示区：只要 session_state 里有数据，就画图
+    if st.session_state.get("my_log"):
+        log = st.session_state.my_log  # 从会话记忆里拿数据，不怕页面重跑
+        
+        # 1. 画雷达图
+        categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
+        scores = {cat: 100 for cat in categories}
+        for entry in log:
+            kp = entry["knowledge_point"]
+            if kp in scores:
+                scores[kp] = max(0, scores[kp] - 15)
+        
+        values = [scores[cat] for cat in categories]
+        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+        values += values[:1]
+        angles += angles[:1]
+        
+        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+        ax.plot(angles, values, 'o-', linewidth=2)
+        ax.fill(angles, values, alpha=0.25)
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(categories)
+        ax.set_ylim(0, 100)
+        
+        # 如果你上传了字体文件，这行一定要保留
+        font_path = "SourceHanSansCN-Regular.otf"
+        font_prop = font_manager.FontProperties(fname=font_path)
+        plt.title("学情诊断雷达图", fontproperties=font_prop, pad=25, fontsize=14)
+        
+        plt.savefig("radar.png")
+        st.image("radar.png")
+        
+        weakest = min(scores, key=scores.get)
+        st.warning(f"建议优先巩固：{weakest}")
+        
+        # 2. 学生专属建议按钮
+        if st.button("🤖 获取我的专属学习建议"):
+            with st.spinner("AI正在为你分析..."):
+                record_text = "、".join([entry["knowledge_point"] for entry in log])
+                prompt = f"你是一个亲切幽默的CAD课程助教。学生{st.session_state.get('student_name', '同学')}最近在以下知识点遇到了困难：{record_text}。请用鼓励、轻松的语气，给学生写一段100字左右的加油打气和学习建议。"
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                st.success(response.choices[0].message.content)
+    else:
+        # 如果没点过刷新，或者真的没数据
+        if "my_log" in st.session_state and not st.session_state.my_log:
             st.info("暂无学习记录，快去问问题吧")
+        else:
+            st.info("点击上方按钮加载你的学情诊断报告")
 
 # 主聊天区
 if "messages" not in st.session_state:
