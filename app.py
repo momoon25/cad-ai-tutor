@@ -86,6 +86,49 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
 with st.sidebar:
     st.header("学情诊断")
     
+       # ================= 教师看板 =================
+    st.subheader("👨‍🏫 教师专区")
+    teacher_pwd = st.text_input("请输入教师密码", type="password")
+    
+    if teacher_pwd == "teacher123":
+        st.success("教师模式已开启")
+        
+        # 功能1：全班薄弱点排行
+        if st.button("查看全班薄弱点排行"):
+            from collections import Counter
+            data = supabase.table("weakness_log").select("knowledge_point").execute()
+            if data.data:
+                points = [row["knowledge_point"] for row in data.data]
+                counts = Counter(points)
+                st.bar_chart(counts)
+            else:
+                st.info("暂无全班数据")
+        
+        # 功能2：个人学情查询 + AI评语
+        query_id = st.text_input("输入学号查询个人学情")
+        if query_id:
+            data = supabase.table("weakness_log").select("*").eq("student_id", query_id).execute()
+            if data.data:
+                st.write(f"**学号 {query_id} 的薄弱点记录：**")
+                for row in data.data:
+                    st.write(f"- {row['knowledge_point']}：{row['error_type']}")
+                
+                # 功能3：AI一键生成个性化诊断
+                if st.button("🤖 AI生成诊断评语"):
+                    with st.spinner("AI正在分析学情..."):
+                        record_text = "".join([f"- {row['knowledge_point']}: {row['error_type']}\n" for row in data.data])
+                        prompt = f"你是一个《建筑工程CAD》课程的学情分析师。这是学号{query_id}同学的薄弱点记录：\n{record_text}\n请给该学生写一段100字左右的学习诊断评语，指出他的薄弱环节，并给出具体的改进建议。"
+                        
+                        response = client.chat.completions.create(
+                            model="deepseek-chat",
+                            messages=[{"role": "user", "content": prompt}]
+                        )
+                        st.info(response.choices[0].message.content)
+            else:
+                st.info("该学号暂无记录")
+    elif teacher_pwd:
+        st.error("密码错误")
+    # ============================================   
     if st.button("刷新诊断报告"):
         # 注意：这里从 Supabase 读取数据，整段都缩进在 if st.button 里面
         data = supabase.table("weakness_log").select("knowledge_point").eq("student_id", st.session_state.student_id).execute()
