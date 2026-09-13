@@ -26,10 +26,10 @@ supabase = create_client(
 
 # ================= 2. 设定角色 =================
 system_prompt = """
-你是《建筑工程CAD》课程的AI助教。本课程使用中望建筑版CAD。
+你是《建筑工程CAD》课程中一位非常亲切、耐心、幽默的AI助教。
+你的任务是用通俗易懂、鼓励式的语言，帮助学生解决中望建筑版CAD的操作问题。
 回答时优先使用中望建筑版的专用命令，如"绘制墙体""轴网标注"等，不要用AutoCAD通用命令替代。
-
-【重要规则】当学生提问中出现以下词汇："我不会"、"我错了"、"搞不懂"、"对不上"、"总是断开"、"出错了"、"怎么办"时，你必须调用 record_weakness 工具记录该薄弱点。这是强制要求。
+【重要规则】当学生提问中出现"我不会"、"我错了"、"搞不懂"、"对不上"、"总是断开"、"出错了"等困惑时，你必须调用 record_weakness 工具记录该薄弱点。这是强制要求。
 """
 
 # ================= 3. 薄弱点记录工具 =================
@@ -56,9 +56,9 @@ tools = [{
 }]
 
 def record_weakness(knowledge_point, error_type):
-    print(f"【测试追踪】后台正在记录：{knowledge_point} - {error_type}")
     supabase.table("weakness_log").insert({
         "student_id": st.session_state.student_id,
+        "student_name": st.session_state.student_name,  # 加上这行
         "knowledge_point": knowledge_point,
         "error_type": error_type
     }).execute()
@@ -73,13 +73,19 @@ query_params = st.query_params
 if "student_id" in query_params:
     st.session_state.student_id = query_params["student_id"]
 
-# 如果没学号，就让学生输入
+# 如果没学号，就让学生输入学号和姓名
 if "student_id" not in st.session_state or not st.session_state.student_id:
-    student_id = st.text_input("请输入你的学号，按回车确认")
-    if student_id:
-        st.session_state.student_id = student_id
-        st.query_params["student_id"] = student_id
-        st.rerun()
+    st.info("👋 欢迎来到《建筑工程CAD》AI伴学空间！")
+    student_id = st.text_input("请输入你的学号")
+    student_name = st.text_input("请输入你的姓名（中文即可）")
+    if st.button("进入系统"):
+        if student_id and student_name:
+            st.session_state.student_id = student_id
+            st.session_state.student_name = student_name
+            st.query_params["student_id"] = student_id
+            st.rerun()
+        else:
+            st.warning("学号和姓名都不能为空哦！")
     st.stop()
 
 # 侧边栏：雷达图
@@ -163,6 +169,19 @@ with st.sidebar:
             
             weakest = min(scores, key=scores.get)
             st.warning(f"建议优先巩固：{weakest}")
+            
+            # ↓↓↓↓↓ 加在这里，缩进必须和 st.warning 一模一样 ↓↓↓↓↓
+            if st.button("🤖 获取我的专属学习建议"):
+                with st.spinner("AI正在为你分析..."):
+                    record_text = "、".join([entry["knowledge_point"] for entry in log])
+                    prompt = f"你是一个亲切幽默的CAD课程助教。学生{st.session_state.get('student_name', '同学')}最近在以下知识点遇到了困难：{record_text}。请用鼓励、轻松的语气，给学生写一段100字左右的加油打气和学习建议。"
+                    response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    st.success(response.choices[0].message.content)
+            # ↑↑↑↑↑ 加到这里结束 ↑↑↑↑↑
+
         else:
             st.info("暂无学习记录，快去问问题吧")
 
