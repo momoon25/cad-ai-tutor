@@ -114,7 +114,7 @@ with st.sidebar:
             font_prop = font_manager.FontProperties(fname=font_path)
             ax.set_xticklabels(categories, fontproperties=font_prop)
             ax.set_ylim(0, 100)
-            plt.title("学情诊断雷达图")
+            plt.title("学情诊断雷达图", fontproperties=font_prop, pad=25, fontsize=14)
             plt.savefig("radar.png")
             st.image("radar.png")
             
