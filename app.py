@@ -89,16 +89,7 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
     student_id = st.text_input("请输入你的学号")
     student_name = st.text_input("请输入你的姓名（中文即可）")
     
-    # 4. 示例提问引导（折叠面板）
-    with st.expander("💡 不知道怎么问？点这里看看示例吧"):
-        st.markdown("""
-        - 轴网标注一键生成的命令怎么用？
-        - 我画墙体时总是断开对不上，怎么办？
-        - 图层锁定了怎么解锁？
-        - 尺寸标注的样式怎么统一修改？
-        """)
-    
-    # 5. 进入系统
+    # 4. 进入系统
     if st.button("进入系统"):
         if student_id and student_name:
             st.session_state.student_id = student_id
@@ -214,6 +205,18 @@ if "messages" not in st.session_state:
 for msg in st.session_state.messages:
     if isinstance(msg, dict) and msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])
+
+# 动态显示欢迎语
+st.success(f"你好，{st.session_state.get('student_name', '同学')}！今天想画点什么？如果不知道怎么问，可以看看下面的示例👇")
+
+# 示例提问引导
+with st.expander("💡 不知道怎么问？点这里看看示例吧"):
+    st.markdown("""
+    - 轴网标注一键生成的命令怎么用？
+    - 我画墙体时总是断开对不上，怎么办？
+    - 图层锁定了怎么解锁？
+    - 尺寸标注的样式怎么统一修改？
+    """)
 
 if user_input := st.chat_input("问一个CAD问题..."):
     st.chat_message("user").write(user_input)
