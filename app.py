@@ -175,7 +175,7 @@ with st.sidebar:
         import os
 font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "SourceHanSansCN-Regular.otf")
 font_prop = font_manager.FontProperties(fname=font_path)
-        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
         ax.plot(angles, values, 'o-', linewidth=2)
         ax.fill(angles, values, alpha=0.25)
         ax.set_xticks(angles[:-1])
