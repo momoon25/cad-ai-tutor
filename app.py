@@ -105,115 +105,115 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
 with st.sidebar:
     st.header("学情诊断")
     
-    # ================= 教师看板 =================
-        st.subheader("👨‍🏫 教师专区")
-        teacher_pwd = st.text_input("请输入教师密码", type="password")
+# ================= 教师看板 =================
+    st.subheader("👨‍🏫 教师专区")
+    teacher_pwd = st.text_input("请输入教师密码", type="password")
+    
+    if teacher_pwd == "teacher123":
+        st.success("教师模式已开启")
         
-        if teacher_pwd == "teacher123":
-            st.success("教师模式已开启")
-            
-            # ========== 功能1：全班薄弱点排行 ==========
-            if st.button("查看全班薄弱点排行"):
-                from collections import Counter
-                data = supabase.table("weakness_log").select("knowledge_point").execute()
-                if data.data:
-                    points = [row["knowledge_point"] for row in data.data]
-                    counts = Counter(points)
-                    st.bar_chart(counts)
-                else:
-                    st.info("暂无全班数据")
-            
-            # ========== 功能2：教师修正学情画像 ==========
-            st.markdown("---")
-            st.subheader("📝 教师修正学情画像")
-            
-            if st.button("加载待标注记录"):
-                data = supabase.table("weakness_log").select(
-                    "id, student_id, student_name, knowledge_point, error_type, teacher_remark"
-                ).order("created_at", desc=True).limit(20).execute()
-                if data.data:
-                    st.session_state.pending_records = data.data
-                else:
-                    st.info("暂无记录")
-            
-            if "pending_records" in st.session_state and st.session_state.pending_records:
-                for record in st.session_state.pending_records:
-                    col1, col2, col3 = st.columns([3, 2, 2])
-                    with col1:
-                        st.write(f"**{record.get('student_name', '未知')}**（{record['student_id']}）：{record['knowledge_point']} - {record['error_type']}")
-                    with col2:
-                        if record.get("teacher_remark"):
-                            st.write(f"已标注：**{record['teacher_remark']}**")
-                        else:
-                            st.write("未标注")
-                    with col3:
-                        remark = st.selectbox(
-                            "标注",
-                            ["未标注", "真实难点", "初学噪声", "已强化"],
-                            key=f"remark_{record['id']}",
-                            label_visibility="collapsed"
-                        )
-                        if st.button("保存标注", key=f"save_{record['id']}"):
-                            supabase.table("weakness_log").update(
-                                {"teacher_remark": remark}
-                            ).eq("id", record["id"]).execute()
-                            st.success("已保存")
-                            st.rerun()
-            
-            # ========== 功能3：本课重难点推荐 ==========
-            st.markdown("---")
-            st.subheader("🎯 本课重难点推荐")
-            
-            data = supabase.table("weakness_log").select("knowledge_point, teacher_remark").execute()
+        # ========== 功能1：全班薄弱点排行 ==========
+        if st.button("查看全班薄弱点排行"):
+            from collections import Counter
+            data = supabase.table("weakness_log").select("knowledge_point").execute()
             if data.data:
-                from collections import Counter
-                # 统计被标记为“真实难点”的记录
-                real_difficulties = [
-                    row["knowledge_point"] for row in data.data 
-                    if row.get("teacher_remark") == "真实难点"
-                ]
-                if real_difficulties:
-                    counts = Counter(real_difficulties)
-                    top = counts.most_common(1)[0]
-                    st.warning(f"**教学难点建议**：{top[0]}（被标记为真实难点 {top[1]} 次）")
-                    
-                    # 全班最高频薄弱点作为重点建议
-                    all_points = [row["knowledge_point"] for row in data.data]
-                    all_counts = Counter(all_points)
-                    top_all = all_counts.most_common(1)[0]
-                    st.info(f"**教学重点建议**：{top_all[0]}（全班高频薄弱点，出现 {top_all[1]} 次）")
-                else:
-                    st.info("暂无标记为“真实难点”的记录，请先在上方完成标注")
+                points = [row["knowledge_point"] for row in data.data]
+                counts = Counter(points)
+                st.bar_chart(counts)
             else:
-                st.info("暂无数据")
-            
-            # ========== 功能4：个人学情查询 + AI评语 ==========
-            st.markdown("---")
-            query_id = st.text_input("输入学号查询个人学情")
-            if query_id:
-                data = supabase.table("weakness_log").select("*").eq("student_id", query_id).execute()
-                if data.data:
-                    st.write(f"**学号 {query_id} 的薄弱点记录：**")
-                    for row in data.data:
-                        remark = row.get("teacher_remark", "")
-                        st.write(f"- {row['knowledge_point']}：{row['error_type']}" + (f"（教师标注：{remark}）" if remark else ""))
-                    
-                    if st.button("🤖 AI生成诊断评语"):
-                        with st.spinner("AI正在分析学情..."):
-                            record_text = "".join([
-                                f"- {row['knowledge_point']}: {row['error_type']}\n" 
-                                for row in data.data
-                            ])
-                            prompt = f"你是一个《建筑工程CAD》课程的学情分析师。这是学号{query_id}同学的薄弱点记录：\n{record_text}\n请给该学生写一段100字左右的学习诊断评语，指出他的薄弱环节，并给出具体的改进建议。"
-                            response = client.chat.completions.create(
-                                model="deepseek-chat",
-                                messages=[{"role": "user", "content": prompt}]
-                            )
-                            st.info(response.choices[0].message.content)
-                else:
-                    st.info("该学号暂无记录")
-        elif teacher_pwd:
-            st.error("密码错误")
+                st.info("暂无全班数据")
+        
+        # ========== 功能2：教师修正学情画像 ==========
+        st.markdown("---")
+        st.subheader("📝 教师修正学情画像")
+        
+        if st.button("加载待标注记录"):
+            data = supabase.table("weakness_log").select(
+                "id, student_id, student_name, knowledge_point, error_type, teacher_remark"
+            ).order("created_at", desc=True).limit(20).execute()
+            if data.data:
+                st.session_state.pending_records = data.data
+            else:
+                st.info("暂无记录")
+        
+        if "pending_records" in st.session_state and st.session_state.pending_records:
+            for record in st.session_state.pending_records:
+                col1, col2, col3 = st.columns([3, 2, 2])
+                with col1:
+                    st.write(f"**{record.get('student_name', '未知')}**（{record['student_id']}）：{record['knowledge_point']} - {record['error_type']}")
+                with col2:
+                    if record.get("teacher_remark"):
+                        st.write(f"已标注：**{record['teacher_remark']}**")
+                    else:
+                        st.write("未标注")
+                with col3:
+                    remark = st.selectbox(
+                        "标注",
+                        ["未标注", "真实难点", "初学噪声", "已强化"],
+                        key=f"remark_{record['id']}",
+                        label_visibility="collapsed"
+                    )
+                    if st.button("保存标注", key=f"save_{record['id']}"):
+                        supabase.table("weakness_log").update(
+                            {"teacher_remark": remark}
+                        ).eq("id", record["id"]).execute()
+                        st.success("已保存")
+                        st.rerun()
+        
+        # ========== 功能3：本课重难点推荐 ==========
+        st.markdown("---")
+        st.subheader("🎯 本课重难点推荐")
+        
+        data = supabase.table("weakness_log").select("knowledge_point, teacher_remark").execute()
+        if data.data:
+            from collections import Counter
+            # 统计被标记为“真实难点”的记录
+            real_difficulties = [
+                row["knowledge_point"] for row in data.data 
+                if row.get("teacher_remark") == "真实难点"
+            ]
+            if real_difficulties:
+                counts = Counter(real_difficulties)
+                top = counts.most_common(1)[0]
+                st.warning(f"**教学难点建议**：{top[0]}（被标记为真实难点 {top[1]} 次）")
+                
+                # 全班最高频薄弱点作为重点建议
+                all_points = [row["knowledge_point"] for row in data.data]
+                all_counts = Counter(all_points)
+                top_all = all_counts.most_common(1)[0]
+                st.info(f"**教学重点建议**：{top_all[0]}（全班高频薄弱点，出现 {top_all[1]} 次）")
+            else:
+                st.info("暂无标记为“真实难点”的记录，请先在上方完成标注")
+        else:
+            st.info("暂无数据")
+        
+        # ========== 功能4：个人学情查询 + AI评语 ==========
+        st.markdown("---")
+        query_id = st.text_input("输入学号查询个人学情")
+        if query_id:
+            data = supabase.table("weakness_log").select("*").eq("student_id", query_id).execute()
+            if data.data:
+                st.write(f"**学号 {query_id} 的薄弱点记录：**")
+                for row in data.data:
+                    remark = row.get("teacher_remark", "")
+                    st.write(f"- {row['knowledge_point']}：{row['error_type']}" + (f"（教师标注：{remark}）" if remark else ""))
+                
+                if st.button("🤖 AI生成诊断评语"):
+                    with st.spinner("AI正在分析学情..."):
+                        record_text = "".join([
+                            f"- {row['knowledge_point']}: {row['error_type']}\n" 
+                            for row in data.data
+                        ])
+                        prompt = f"你是一个《建筑工程CAD》课程的学情分析师。这是学号{query_id}同学的薄弱点记录：\n{record_text}\n请给该学生写一段100字左右的学习诊断评语，指出他的薄弱环节，并给出具体的改进建议。"
+                        response = client.chat.completions.create(
+                            model="deepseek-chat",
+                            messages=[{"role": "user", "content": prompt}]
+                        )
+                        st.info(response.choices[0].message.content)
+            else:
+                st.info("该学号暂无记录")
+    elif teacher_pwd:
+        st.error("密码错误")
     # ============================================   
         # 数据加载区：点击后把数据存入 session_state
     if st.button("刷新诊断报告"):
