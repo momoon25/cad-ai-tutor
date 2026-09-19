@@ -258,6 +258,43 @@ with st.sidebar:
                 for row in data.data:
                     remark = row.get("teacher_remark", "")
                     st.write(f"- {row['knowledge_point']}：{row['error_type']}" + (f"（教师标注：{remark}）" if remark else ""))
+
+        # ========== 个人能力雷达图 ==========
+                st.markdown("---")
+                st.write("**该生能力雷达图：**")
+                
+                import os
+                import matplotlib.pyplot as plt
+                from matplotlib import font_manager
+                
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                font_path = os.path.join(current_dir, "SourceHanSansCN-Regular.otf")
+                font_manager.fontManager.addfont(font_path)
+                font_name = font_manager.FontProperties(fname=font_path).get_name()
+                plt.rcParams['font.sans-serif'] = [font_name]
+                plt.rcParams['axes.unicode_minus'] = False
+                
+                categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "楼梯与垂直交通", "尺寸与文字", "首层构件", "图框与输出", "图纸校审"]
+                scores = {cat: 100 for cat in categories}
+                for row in data.data:
+                    kp = row["knowledge_point"]
+                    if kp in scores:
+                        scores[kp] = max(0, scores[kp] - 15)
+                
+                values = [scores[cat] for cat in categories]
+                angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+                values += values[:1]
+                angles += angles[:1]
+                
+                fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+                ax.plot(angles, values, 'o-', linewidth=2)
+                ax.fill(angles, values, alpha=0.25)
+                ax.set_xticks(angles[:-1])
+                ax.set_xticklabels(categories)
+                ax.set_ylim(0, 100)
+                plt.title(f"{query_id} 能力雷达图", pad=25, fontsize=14)
+                plt.tight_layout()
+                st.pyplot(fig)
                 
                 if st.button("🤖 AI生成诊断评语"):
                     with st.spinner("AI正在分析学情..."):
@@ -305,7 +342,7 @@ with st.sidebar:
         plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示方块的问题
         
         # 绘制雷达图
-        categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "尺寸与文字", "图框与输出", "图纸校审"]
+        categories = ["图层管理", "基础绘图命令", "轴网与墙体", "参数化门窗", "楼梯与垂直交通", "尺寸与文字", "首层构件", "图框与输出", "图纸校审"]
         scores = {cat: 100 for cat in categories}
         for entry in log:
             kp = entry["knowledge_point"]
