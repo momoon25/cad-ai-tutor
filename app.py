@@ -75,6 +75,10 @@ if "student_id" in query_params:
 
 # 如果没学号，就让学生输入学号和姓名
 if "student_id" not in st.session_state or not st.session_state.student_id:
+        # 显示智能体形象
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        st.image("robot.png", width=150)
     # 1. 欢迎引导语
     st.markdown("<h2 style='text-align: center;'>👋 欢迎来到《建筑工程CAD》AI伴学空间！</h2>", unsafe_allow_html=True)
     st.info("我是你的专属CAD伴学小助手，可以为你解答中望建筑版CAD的操作问题、自动记录你的薄弱点，并为你生成专属学情诊断报告。")
@@ -412,7 +416,10 @@ if "messages" not in st.session_state:
 
 for msg in st.session_state.messages:
     if isinstance(msg, dict) and msg["role"] != "system":
-        st.chat_message(msg["role"]).write(msg["content"])
+                        if msg["role"] == "assistant":
+                    st.chat_message(msg["role"], avatar="robot.jpeg").write(msg["content"])
+                else:
+                    st.chat_message(msg["role"], avatar=st.session_state.get("avatar", "👤")).write(msg["content"])
 
 # 动态显示欢迎语
 st.success(f"你好，{st.session_state.get('student_name', '同学')}！今天想画点什么？如果不知道怎么问，可以看看下面的示例👇")
@@ -427,7 +434,7 @@ with st.expander("💡 不知道怎么问？点这里看看示例吧"):
     """)
 
 if user_input := st.chat_input("问一个CAD问题..."):
-    st.chat_message("user").write(user_input)
+    st.chat_message("user", avatar=st.session_state.get("avatar", "👤")).write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
     # 调用 AI
@@ -464,4 +471,4 @@ if user_input := st.chat_input("问一个CAD问题..."):
         reply = msg.content
     
     st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.chat_message("assistant").write(reply)
+    st.chat_message("assistant", avatar="robot.jpeg").write(reply)
