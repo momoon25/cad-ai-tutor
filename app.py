@@ -115,7 +115,23 @@ with st.sidebar:
         # ========== 功能1：全班薄弱点排行 ==========
         if st.button("查看全班薄弱点排行"):
             from collections import Counter
-            data = supabase.table("weakness_log").select("knowledge_point").execute()
+            import datetime
+            
+            # 时间区间选择
+            st.write("**选择时间范围：**")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                start_date = st.date_input("开始日期", value=datetime.date.today() - datetime.timedelta(days=30))
+            with col_b:
+                end_date = st.date_input("结束日期", value=datetime.date.today())
+            
+            # 查询指定时间范围内的数据
+            data = supabase.table("weakness_log").select("knowledge_point, created_at").gte(
+                "created_at", start_date.isoformat()
+            ).lte(
+                "created_at", end_date.isoformat() + "T23:59:59"
+            ).execute()
+            
             if data.data:
                 points = [row["knowledge_point"] for row in data.data]
                 counts = Counter(points)
@@ -136,26 +152,26 @@ with st.sidebar:
                 cats = [item[0] for item in sorted_counts]
                 vals = [item[1] for item in sorted_counts]
                 
-                # 颜色列表（按不同维度区分）
                 color_list = ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6BCB77', '#9B59B6', '#FF8C42', '#3ABEF9', '#F76E9C', '#2ECC71']
                 bar_colors = color_list[:len(cats)]
                 
                 fig, ax = plt.subplots(figsize=(7, 4.5))
                 bars = ax.barh(cats, vals, color=bar_colors, edgecolor='white', linewidth=1.5)
                 
-                # 在每条柱子末端显示数值
                 for bar, val in zip(bars, vals):
                     ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2, 
                             str(val), va='center', fontsize=11, fontweight='bold', color='#333333')
                 
                 ax.set_xlabel("薄弱点出现次数", fontsize=11)
-                ax.set_title("全班薄弱点排行", fontsize=13, fontweight='bold', pad=12)
+                ax.set_title(f"全班薄弱点排行（{start_date} 至 {end_date}）", fontsize=12, fontweight='bold', pad=12)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
                 plt.tight_layout()
                 st.pyplot(fig)
+                
+                st.info(f"该时间段内共有 {len(data.data)} 条薄弱点记录，涉及 {len(counts)} 个知识点维度")
             else:
-                st.info("暂无全班数据")
+                st.info("该时间段内暂无数据，请调整时间范围")
         
         # ========== 功能2：教师修正学情画像 ==========
         st.markdown("---")
@@ -170,7 +186,8 @@ with st.sidebar:
             else:
                 st.info("暂无记录")
         
-        if "pending_records" in st.session_state and st.session_state.pending_records:
+                if "pending_records" in st.session_state and st.session_state.pending_records:
+            remarks_to_save = {}
             for record in st.session_state.pending_records:
                 col1, col2, col3 = st.columns([3, 2, 2])
                 with col1:
@@ -181,18 +198,28 @@ with st.sidebar:
                     else:
                         st.write("未标注")
                 with col3:
+                    default_index = 0
+                    if record.get("teacher_remark") in ["未标注", "真实难点", "初学噪声", "已强化"]:
+                        default_index = ["未标注", "真实难点", "初学噪声", "已强化"].index(record["teacher_remark"])
                     remark = st.selectbox(
                         "标注",
                         ["未标注", "真实难点", "初学噪声", "已强化"],
+                        index=default_index,
                         key=f"remark_{record['id']}",
                         label_visibility="collapsed"
                     )
-                    if st.button("保存标注", key=f"save_{record['id']}"):
+                    remarks_to_save[record["id"]] = remark
+            
+            if st.button("💾 批量保存所有标注"):
+                saved_count = 0
+                for record_id, remark in remarks_to_save.items():
+                    if remark != "未标注":
                         supabase.table("weakness_log").update(
                             {"teacher_remark": remark}
-                        ).eq("id", record["id"]).execute()
-                        st.success("已保存")
-                        st.rerun()
+                        ).eq("id", record_id).execute()
+                        saved_count += 1
+                st.success(f"已批量保存 {saved_count} 条标注")
+                st.rerun()
         
         # ========== 功能3：本课重难点推荐 ==========
         st.markdown("---")
