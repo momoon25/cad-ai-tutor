@@ -416,10 +416,10 @@ if "messages" not in st.session_state:
 
 for msg in st.session_state.messages:
     if isinstance(msg, dict) and msg["role"] != "system":
-                        if msg["role"] == "assistant":
-                    st.chat_message(msg["role"], avatar="robot.jpeg").write(msg["content"])
-                else:
-                    st.chat_message(msg["role"], avatar=st.session_state.get("avatar", "👤")).write(msg["content"])
+        if msg["role"] == "assistant":
+            st.chat_message(msg["role"], avatar="robot.jpeg").write(msg["content"])
+        else:
+            st.chat_message(msg["role"], avatar=st.session_state.get("avatar", "👤")).write(msg["content"])
 
 # 动态显示欢迎语
 st.success(f"你好，{st.session_state.get('student_name', '同学')}！今天想画点什么？如果不知道怎么问，可以看看下面的示例👇")
