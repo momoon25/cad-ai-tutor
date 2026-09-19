@@ -186,7 +186,7 @@ with st.sidebar:
             else:
                 st.info("暂无记录")
         
-                if "pending_records" in st.session_state and st.session_state.pending_records:
+        if "pending_records" in st.session_state and st.session_state.pending_records:
             remarks_to_save = {}
             for record in st.session_state.pending_records:
                 col1, col2, col3 = st.columns([3, 2, 2])
