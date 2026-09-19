@@ -119,7 +119,41 @@ with st.sidebar:
             if data.data:
                 points = [row["knowledge_point"] for row in data.data]
                 counts = Counter(points)
-                st.bar_chart(counts)
+                
+                # 用 matplotlib 画横向彩色条形图
+                import os
+                import matplotlib.pyplot as plt
+                from matplotlib import font_manager
+                
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                font_path = os.path.join(current_dir, "SourceHanSansCN-Regular.otf")
+                font_manager.fontManager.addfont(font_path)
+                font_name = font_manager.FontProperties(fname=font_path).get_name()
+                plt.rcParams['font.sans-serif'] = [font_name]
+                plt.rcParams['axes.unicode_minus'] = False
+                
+                sorted_counts = sorted(counts.items(), key=lambda x: x[1])
+                cats = [item[0] for item in sorted_counts]
+                vals = [item[1] for item in sorted_counts]
+                
+                # 颜色列表（按不同维度区分）
+                color_list = ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6BCB77', '#9B59B6', '#FF8C42', '#3ABEF9', '#F76E9C', '#2ECC71']
+                bar_colors = color_list[:len(cats)]
+                
+                fig, ax = plt.subplots(figsize=(7, 4.5))
+                bars = ax.barh(cats, vals, color=bar_colors, edgecolor='white', linewidth=1.5)
+                
+                # 在每条柱子末端显示数值
+                for bar, val in zip(bars, vals):
+                    ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2, 
+                            str(val), va='center', fontsize=11, fontweight='bold', color='#333333')
+                
+                ax.set_xlabel("薄弱点出现次数", fontsize=11)
+                ax.set_title("全班薄弱点排行", fontsize=13, fontweight='bold', pad=12)
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                plt.tight_layout()
+                st.pyplot(fig)
             else:
                 st.info("暂无全班数据")
         
