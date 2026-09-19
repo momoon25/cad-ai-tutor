@@ -78,7 +78,7 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
         # 显示智能体形象
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        st.image("robot.png", width=150)
+        st.image("robot.jpeg", width=150)
     # 1. 欢迎引导语
     st.markdown("<h2 style='text-align: center;'>👋 欢迎来到《建筑工程CAD》AI伴学空间！</h2>", unsafe_allow_html=True)
     st.info("我是你的专属CAD伴学小助手，可以为你解答中望建筑版CAD的操作问题、自动记录你的薄弱点，并为你生成专属学情诊断报告。")
