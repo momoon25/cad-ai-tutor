@@ -61,8 +61,8 @@ tools = [{
 
 def record_weakness(knowledge_point, error_type, learning_habit):
     supabase.table("weakness_log").insert({
-        "student_id": st.session_state.student_id,
-        "student_name": st.session_state.student_name,
+        "student_id": st.session_state.get("student_id", "未登录"),
+        "student_name": st.session_state.get("student_name", "未知学生"),
         "knowledge_point": knowledge_point,
         "error_type": error_type,
         "learning_habit": learning_habit
