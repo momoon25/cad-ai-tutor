@@ -302,6 +302,56 @@ with st.sidebar:
                     st.info(response.choices[0].message.content)
                 else:
                     st.info("暂无学习习惯记录，请先让学生使用智能体提问")
+          # ========== 功能3.6：班级薄弱点热力图 ==========
+        st.markdown("---")
+        st.subheader("🔥 班级薄弱点热力图")
+        if st.button("生成薄弱点热力图"):
+            import pandas as pd
+            import os
+            import matplotlib.pyplot as plt
+            from matplotlib import font_manager
+            
+            # 加载中文字体
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            font_path = os.path.join(current_dir, "SourceHanSansCN-Regular.otf")
+            font_manager.fontManager.addfont(font_path)
+            font_name = font_manager.FontProperties(fname=font_path).get_name()
+            plt.rcParams['font.sans-serif'] = [font_name]
+            plt.rcParams['axes.unicode_minus'] = False
+            
+            # 拉取数据
+            data = supabase.table("weakness_log").select("knowledge_point, error_type").execute()
+            if data.data:
+                df = pd.DataFrame(data.data)
+                pivot = pd.crosstab(df["knowledge_point"], df["error_type"])
+                
+                # 画热力图
+                fig, ax = plt.subplots(figsize=(8, 6))
+                im = ax.imshow(pivot.values, cmap='YlOrRd', aspect='auto')
+                
+                ax.set_xticks(range(len(pivot.columns)))
+                ax.set_yticks(range(len(pivot.index)))
+                ax.set_xticklabels(pivot.columns, fontsize=10)
+                ax.set_yticklabels(pivot.index, fontsize=10)
+                plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+                
+                # 在格子中标注数字
+                for i in range(len(pivot.index)):
+                    for j in range(len(pivot.columns)):
+                        val = pivot.values[i, j]
+                        if val > 0:
+                            ax.text(j, i, str(val), ha="center", va="center", 
+                                    color="black" if val < pivot.values.max() * 0.7 else "white",
+                                    fontsize=11, fontweight='bold')
+                
+                plt.title("班级薄弱点热力图（知识点 × 错误类型）", fontsize=13, pad=15)
+                plt.colorbar(im, ax=ax, label="出现次数")
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                st.info(f"该热力图基于 {len(data.data)} 条薄弱点记录，横轴为错误类型，纵轴为知识点，颜色越深表示该组合出现次数越多。")
+            else:
+                st.info("暂无薄弱点数据")
                     
         # ========== 功能4：个人学情查询 + AI评语 ==========
         st.markdown("---")
