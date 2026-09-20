@@ -277,7 +277,32 @@ with st.sidebar:
                 st.info("暂无标记为“真实难点”的记录，请先在上方完成标注")
         else:
             st.info("暂无数据")
-        
+
+         # ========== 功能3.5：全班学习习惯分析 ==========
+        st.markdown("---")
+        st.subheader("🧠 全班学习习惯分析")
+        if st.button("生成全班学习习惯诊断"):
+            with st.spinner("AI正在分析全班学习习惯..."):
+                data = supabase.table("weakness_log").select("student_id, student_name, learning_habit").execute()
+                habits_all = [row.get("learning_habit", "") for row in data.data if row.get("learning_habit")]
+                
+                if habits_all:
+                    from collections import Counter
+                    counts = Counter(habits_all)
+                    
+                    st.write("**全班学习习惯分布：**")
+                    st.bar_chart(counts)
+                    
+                    habit_summary = "、".join([f"{k}（{v}人）" for k, v in counts.items()])
+                    prompt = f"这是一个CAD课程班级的学习习惯统计：{habit_summary}。请分析这个班级整体的学习习惯特点，指出优势、问题和教学改进建议，写一段150字左右的班级学情诊断。"
+                    response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    st.info(response.choices[0].message.content)
+                else:
+                    st.info("暂无学习习惯记录，请先让学生使用智能体提问")
+                    
         # ========== 功能4：个人学情查询 + AI评语 ==========
         st.markdown("---")
         query_id = st.text_input("输入学号查询个人学情")
