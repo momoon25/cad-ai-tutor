@@ -183,27 +183,28 @@ with st.sidebar:
                 st.info(f"该时间段内共有 {len(data.data)} 条薄弱点记录，涉及 {len(counts)} 个知识点维度")
             else:
                 st.info("该时间段内暂无数据，请调整时间范围")
-
-                st.markdown("---")
-            st.subheader("🔔 课中即时热词（最近30分钟）")
-            if st.button("刷新热词"):
-                import datetime
-                thirty_min_ago = (datetime.datetime.now() - datetime.timedelta(minutes=30)).isoformat()
-                data = supabase.table("weakness_log").select("knowledge_point").gte(
-                    "created_at", thirty_min_ago
-                ).execute()
-                if data.data:
-                    from collections import Counter
-                    points = [row["knowledge_point"] for row in data.data]
-                    counts = Counter(points)
-                    top = counts.most_common(3)
-                    for point, cnt in top:
-                        if cnt >= 3:
-                            st.error(f"⚠️ 高频问题：**{point}**（{cnt}次）——建议暂停操作，集中讲解")
-                        else:
-                            st.info(f"📌 {point}（{cnt}次）")
+        
+        # ========== 功能1.1：课中即时热词 ==========
+        st.markdown("---")
+    st.subheader("🔔 课中即时热词（最近30分钟）")
+    if st.button("刷新热词"):
+        import datetime
+        thirty_min_ago = (datetime.datetime.now() - datetime.timedelta(minutes=30)).isoformat()
+        data = supabase.table("weakness_log").select("knowledge_point").gte(
+            "created_at", thirty_min_ago
+        ).execute()
+        if data.data:
+            from collections import Counter
+            points = [row["knowledge_point"] for row in data.data]
+            counts = Counter(points)
+            top = counts.most_common(3)
+            for point, cnt in top:
+                if cnt >= 3:
+                    st.error(f"⚠️ 高频问题：**{point}**（{cnt}次）——建议暂停操作，集中讲解")
                 else:
-                    st.success("当前无高频问题，课堂进展顺利")
+                    st.info(f"📌 {point}（{cnt}次）")
+        else:
+            st.success("当前无高频问题，课堂进展顺利")
                 
         # ========== 功能2：教师修正学情画像 ==========
         st.markdown("---")
