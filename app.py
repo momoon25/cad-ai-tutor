@@ -379,6 +379,51 @@ with st.sidebar:
                     remark = row.get("teacher_remark", "")
                     st.write(f"- {row['knowledge_point']}：{row['error_type']}" + (f"（教师标注：{remark}）" if remark else ""))
 
+         # ========== 功能5：中望评分报告导入与AI建议 ==========
+        st.markdown("---")
+        st.subheader("📥 中望评分报告导入")
+        uploaded_file = st.file_uploader("上传中望导出的评分报告（CSV或JSON）", type=["csv", "json"])
+        
+        if uploaded_file is not None:
+            import pandas as pd
+            import json
+            
+            # 1. 读取文件
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_json(uploaded_file)
+            
+            st.write("**评分报告预览：**")
+            st.dataframe(df)
+            
+            # 2. 选人或输入学号
+            query_id = st.text_input("输入要生成建议的学号（需与报告中的学号列一致）")
+            if query_id:
+                # 3. 从上传的报告中提取该学生的评分信息
+                # 假设报告中有一列叫 'student_id'，以及 'score', 'error_module' 等
+                student_row = df[df.iloc[:, 0] == query_id]  # 默认按第一列匹配学号
+                if not student_row.empty:
+                    # 将这一行数据转为文字描述发给AI
+                    score_info = student_row.iloc[0].to_dict()
+                    score_text = "、".join([f"{k}:{v}" for k, v in score_info.items()])
+                    
+                    # 4. 从数据库调取该生历史薄弱点
+                    history_data = supabase.table("weakness_log").select("knowledge_point, error_type").eq("student_id", query_id).execute()
+                    history_text = "、".join([f"{row['knowledge_point']}-{row['error_type']}" for row in history_data.data]) if history_data.data else "暂无历史记录"
+                    
+                    # 5. 调AI生成个性化建议
+                    if st.button("🧠 生成专属学习建议"):
+                        with st.spinner("AI正在结合评分报告和历史薄弱点分析..."):
+                            prompt = f"这是一个CAD课程学生的中望评分报告：{score_text}。他/她历史薄弱点是：{history_text}。请针对该生实际情况，写一段100字左右的个性化学习建议，指出需要加强的具体环节，给出下一步练习方向，语气要鼓励。"
+                            response = client.chat.completions.create(
+                                model="deepseek-chat",
+                                messages=[{"role": "user", "content": prompt}]
+                            )
+                            st.info(response.choices[0].message.content)
+                else:
+                    st.warning("报告里没找到这个学号，请检查输入或报告内容")
+                    
         # ========== 个人能力雷达图 ==========
                 st.markdown("---")
                 st.write("**该生能力雷达图：**")
