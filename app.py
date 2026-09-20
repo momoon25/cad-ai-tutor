@@ -210,11 +210,23 @@ with st.sidebar:
         st.subheader("📝 教师修正学情画像")
         
         if st.button("加载待标注记录"):
+            # 拉取最近50条，以便过滤出足够数量的未标注记录
             data = supabase.table("weakness_log").select(
                 "id, student_id, student_name, knowledge_point, error_type, teacher_remark"
-            ).order("created_at", desc=True).limit(20).execute()
+            ).order("created_at", desc=True).limit(50).execute()
+            
             if data.data:
-                st.session_state.pending_records = data.data
+                # 过滤掉已经标注过的记录，只保留没有标注或标注为"未标注"的
+                unmarked_records = [
+                    r for r in data.data 
+                    if not r.get("teacher_remark") or r.get("teacher_remark") == "未标注"
+                ]
+                if unmarked_records:
+                    st.session_state.pending_records = unmarked_records[:20] # 显示前20条待标注的
+                    st.success(f"已加载 {len(st.session_state.pending_records)} 条待标注记录")
+                else:
+                    st.session_state.pending_records = []
+                    st.info("所有记录均已标注完成！")
             else:
                 st.info("暂无记录")
         
