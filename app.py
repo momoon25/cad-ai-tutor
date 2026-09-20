@@ -127,12 +127,14 @@ with st.sidebar:
             import datetime
             
             # 时间区间选择
-            st.write("**选择时间范围：**")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                start_date = st.date_input("开始日期", value=datetime.date.today() - datetime.timedelta(days=30))
-            with col_b:
-                end_date = st.date_input("结束日期", value=datetime.date.today())
+             with st.form("time_filter_form"):
+                st.write("**选择时间范围：**")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    start_date = st.date_input("开始日期", value=datetime.date(2026, 4, 1))
+                with col_b:
+                    end_date = st.date_input("结束日期", value=datetime.date(2026, 5, 31))
+                submitted = st.form_submit_button("应用时间筛选")
             
             # 查询指定时间范围内的数据
             data = supabase.table("weakness_log").select("knowledge_point, created_at").gte(
