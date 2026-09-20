@@ -29,7 +29,7 @@ system_prompt = """
 你是《建筑工程CAD》课程中一位非常亲切、耐心、幽默的AI助教。
 你的任务是用通俗易懂、鼓励式的语言，帮助学生解决中望建筑版CAD的操作问题。
 回答时优先使用中望建筑版的专用命令，如"绘制墙体""轴网标注"等，不要用AutoCAD通用命令替代。
-【重要规则】当学生提问中出现"我不会"、"我错了"、"搞不懂"、"对不上"、"总是断开"、"出错了"等困惑时，你必须调用 record_weakness 工具记录该薄弱点。这是强制要求。
+【重要规则】当学生提问中出现"我不会"、"我错了"、"搞不懂"、"对不上"、"总是断开"、"出错了"等困惑时，你必须调用 record_weakness 工具记录该薄弱点，并根据学生的提问方式判断其学习习惯，从以下选项中选择最匹配的一项：提问深度浅、提问深度深、表述模糊、表述清晰、依赖AI直接要答案、有独立思考痕迹、有验证追问意识。这是强制要求。
 """
 
 # ================= 3. 薄弱点记录工具 =================
@@ -37,7 +37,7 @@ tools = [{
     "type": "function",
     "function": {
         "name": "record_weakness",
-        "description": "当学生提问暴露出对某个CAD知识点的理解困难或错误操作时，记录该薄弱点。",
+         "description": "当学生提问暴露出对某个CAD知识点的理解困难或操作错误时，记录该薄弱点，并判断其学习习惯。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -45,24 +45,29 @@ tools = [{
                     "type": "string",
                     "description": "知识点：图层管理、基础绘图命令、轴网与墙体、参数化门窗、尺寸与文字、图框与输出、图纸校审"
                 },
-                "error_type": {
+                 "error_type": {
                     "type": "string",
                     "description": "错误类型：命令混淆、参数错误、操作顺序错误、概念不清"
+                },
+                "learning_habit": {
+                    "type": "string",
+                    "description": "根据学生提问方式判断其学习习惯，从以下选项中选择：提问深度浅、提问深度深、表述模糊、表述清晰、依赖AI直接要答案、有独立思考痕迹、有验证追问意识"
                 }
             },
-            "required": ["knowledge_point", "error_type"]
+            "required": ["knowledge_point", "error_type", "learning_habit"]
         }
     }
 }]
 
-def record_weakness(knowledge_point, error_type):
+def record_weakness(knowledge_point, error_type, learning_habit):
     supabase.table("weakness_log").insert({
         "student_id": st.session_state.student_id,
-        "student_name": st.session_state.student_name,  # 加上这行
+        "student_name": st.session_state.student_name,
         "knowledge_point": knowledge_point,
-        "error_type": error_type
+        "error_type": error_type,
+        "learning_habit": learning_habit
     }).execute()
-    return "已记录薄弱点"
+    return "已记录"
 
 # ================= 4. 网页界面 =================
 st.set_page_config(page_title="CAD AI伴学", layout="wide")
@@ -320,7 +325,23 @@ with st.sidebar:
                 plt.title(f"{query_id} 能力雷达图", pad=25, fontsize=14)
                 plt.tight_layout()
                 st.pyplot(fig)
-                
+
+         # ========== AI学习习惯分析 ==========
+                st.markdown("---")
+                if st.button("🧠 AI学习习惯分析"):
+                    with st.spinner("AI正在分析该生学习习惯..."):
+                        habits = [row.get("learning_habit", "") for row in data.data if row.get("learning_habit")]
+                        if habits:
+                            habit_text = "、".join(habits)
+                            prompt = f"这是一个CAD课程学生的学习习惯记录：{habit_text}。请分析该生的学习习惯特点，指出他在学习方式上的优势和需要改进的地方，写一段100字左右的诊断。"
+                            response = client.chat.completions.create(
+                                model="deepseek-chat",
+                                messages=[{"role": "user", "content": prompt}]
+                            )
+                            st.info(response.choices[0].message.content)
+                        else:
+                            st.info("该生暂无可分析的学习习惯记录")
+                            
                 if st.button("🤖 AI生成诊断评语"):
                     with st.spinner("AI正在分析学情..."):
                         record_text = "".join([
