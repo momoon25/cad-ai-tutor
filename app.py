@@ -166,11 +166,28 @@ with st.sidebar:
                     # 自动识别分项列（第5列到最后）
                     score_cols = df.columns[4:]
                     avg_by_col = df[score_cols].mean()
-                    weak_items = avg_by_col.nsmallest(3)
+
+                    # 每个分项的满分（按你的评分标准）
+                    full_marks = {
+                        '幅面图框': 10, '墙体': 50, '门': 5, '窗': 5, '散水': 1,
+                        '楼梯': 4, '轴线轴号': 5, '房间区域名称': 2,
+                        '图名比例标注': 2, '标高标准': 4, '指北针': 2, '尺寸标注': 10
+                    }
+
+                    # 计算得分率（得分 ÷ 满分）
+                    score_rate = {}
+                    for col in score_cols:
+                        if col in full_marks:
+                            score_rate[col] = avg_by_col[col] / full_marks[col]
+                        else:
+                            score_rate[col] = avg_by_col[col] / 10  # 默认满分10
+
+                    # 按得分率从低到高排序，取最低3项
+                    weak_items = sorted(score_rate.items(), key=lambda x: x[1])[:3]
 
                     # 拼成文字发给AI
                     summary = f"全班平均分：{avg_score:.1f}，最高分：{max_score:.1f}，最低分：{min_score:.1f}。\n"
-                    summary += f"平均得分最低的3个分项：{', '.join([f'{k}({v:.1f}分)' for k, v in weak_items.items()])}"
+                    summary += f"得分率最低的3个分项：{', '.join([f'{k}(得分率{v*100:.0f}%)' for k, v in weak_items])}"
 
                     prompt = f"这是一个CAD课程班级的中望评分数据：{summary}。请分析班级整体情况，指出优势、共性问题和教学改进建议，写一段150字左右的班级学情诊断。"
                     response = client.chat.completions.create(
