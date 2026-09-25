@@ -325,7 +325,14 @@ with st.sidebar:
         if st.button("生成全班学习习惯诊断"):
             with st.spinner("AI正在分析全班学习习惯..."):
                 data = supabase.table("weakness_log").select("student_id, student_name, learning_habit").execute()
-                habits_all = [row.get("learning_habit", "") for row in data.data if row.get("learning_habit")]
+                seen_students = set()
+                habits_all = []
+                for row in data.data:
+                    sid = row.get("student_id")
+                    habit = row.get("learning_habit", "")
+                    if sid and habit and sid not in seen_students:
+                        seen_students.add(sid)
+                        habits_all.append(habit)
                 
                 if habits_all:
                     from collections import Counter
