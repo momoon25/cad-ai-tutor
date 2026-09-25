@@ -122,14 +122,15 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("📥 中望评分导入")
     uploaded_file = st.file_uploader("上传你的中望评分报告（CSV或JSON）", type=["csv", "json"])
-    if uploaded_file is not None:
-        import pandas as pd
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_json(uploaded_file)
-        st.write("**评分报告预览：**")
-        st.dataframe(df)
+        if uploaded_file is not None:
+            import pandas as pd
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file, encoding='utf-8')
+            else:
+                df = pd.read_json(uploaded_file)
+            st.session_state.score_df = df  # 存入会话状态
+            st.write("**评分报告预览：**")
+            st.dataframe(df)
         if st.button("🧠 结合评分生成专属建议"):
             with st.spinner("AI正在分析..."):
                 history_data = supabase.table("weakness_log").select("knowledge_point, error_type").eq(
@@ -147,6 +148,42 @@ with st.sidebar:
     if teacher_pwd == "teacher123":
         st.success("教师模式已开启")
         
+
+        # ========== 功能0：中望评分全班分析 ==========
+        if "score_df" in st.session_state:
+            st.markdown("---")
+            st.subheader("📊 中望评分全班分析")
+            if st.button("生成全班评分分析报告"):
+                with st.spinner("AI正在分析全班评分数据..."):
+                    df = st.session_state.score_df
+                    # 自动识别总成绩列（第4列，即索引3）
+                    total_col = df.columns[3]
+                    # 统计基本数据
+                    avg_score = df[total_col].mean()
+                    max_score = df[total_col].max()
+                    min_score = df[total_col].min()
+
+                    # 自动识别分项列（第5列到最后）
+                    score_cols = df.columns[4:]
+                    avg_by_col = df[score_cols].mean()
+                    weak_items = avg_by_col.nsmallest(3)
+
+                    # 拼成文字发给AI
+                    summary = f"全班平均分：{avg_score:.1f}，最高分：{max_score:.1f}，最低分：{min_score:.1f}。\n"
+                    summary += f"平均得分最低的3个分项：{', '.join([f'{k}({v:.1f}分)' for k, v in weak_items.items()])}"
+
+                    prompt = f"这是一个CAD课程班级的中望评分数据：{summary}。请分析班级整体情况，指出优势、共性问题和教学改进建议，写一段150字左右的班级学情诊断。"
+                    response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    st.info(response.choices[0].message.content)
+        else:
+            st.info("请先在侧边栏上传中望评分报告文件，再点击生成分析")
+
+        # ========== 功能1：全班薄弱点排行 ==========
+        if st.button("查看全班薄弱点排行"):
+            ...
         # ========== 功能1：全班薄弱点排行 ==========
         if st.button("查看全班薄弱点排行"):
             from collections import Counter
