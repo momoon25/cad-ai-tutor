@@ -122,28 +122,28 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("📥 中望评分导入")
     uploaded_file = st.file_uploader("上传你的中望评分报告（CSV或JSON）", type=["csv", "json"])
-        if uploaded_file is not None:
-            import pandas as pd
-            if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file, encoding='utf-8')
-            else:
-                df = pd.read_json(uploaded_file)
-            st.session_state.score_df = df  # 存入会话状态
-            st.write("**评分报告预览：**")
-            st.dataframe(df)
-        if st.button("🧠 结合评分生成专属建议"):
-            with st.spinner("AI正在分析..."):
-                history_data = supabase.table("weakness_log").select("knowledge_point, error_type").eq(
-                    "student_id", st.session_state.student_id
-                ).execute()
-                history_text = "、".join([f"{row['knowledge_point']}-{row['error_type']}" for row in history_data.data]) if history_data.data else "暂无历史记录"
-                score_text = df.to_string()
-                prompt = f"这是一个CAD课程学生的中望评分报告：{score_text}。他/她历史薄弱点是：{history_text}。请针对该生实际情况，写一段100字左右的个性化学习建议，指出需要加强的具体环节，给出下一步练习方向，语气要鼓励。"
-                response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                st.info(response.choices[0].message.content)
+    if uploaded_file is not None:
+        import pandas as pd
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file, encoding='utf-8')
+        else:
+            df = pd.read_json(uploaded_file)
+        st.session_state.score_df = df  # 存入会话状态
+        st.write("**评分报告预览：**")
+        st.dataframe(df)
+    if st.button("🧠 结合评分生成专属建议"):
+        with st.spinner("AI正在分析..."):
+            history_data = supabase.table("weakness_log").select("knowledge_point, error_type").eq(
+                "student_id", st.session_state.student_id
+            ).execute()
+            history_text = "、".join([f"{row['knowledge_point']}-{row['error_type']}" for row in history_data.data]) if history_data.data else "暂无历史记录"
+            score_text = df.to_string()
+            prompt = f"这是一个CAD课程学生的中望评分报告：{score_text}。他/她历史薄弱点是：{history_text}。请针对该生实际情况，写一段100字左右的个性化学习建议，指出需要加强的具体环节，给出下一步练习方向，语气要鼓励。"
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            st.info(response.choices[0].message.content)
                 
     if teacher_pwd == "teacher123":
         st.success("教师模式已开启")
