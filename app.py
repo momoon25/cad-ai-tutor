@@ -626,11 +626,26 @@ with st.expander("💡 不知道怎么问？点这里看看示例吧"):
     - 我画墙体时总是断开对不上，怎么办？
     - 图层锁定了怎么解锁？
     - 尺寸标注的样式怎么统一修改？
+    -我的‘图纸校审’和‘图框与输出’得分偏低。我想要强化这两个薄弱点，能给我布置一套具体的实操任务单吗？
+    -请根据我目前的综合能力分析，如果我想参加技能大赛，你能给我一套有针对性的训练任务吗？
     """)
 
 if user_input := st.chat_input("问一个CAD问题..."):
     st.chat_message("user", avatar=st.session_state.get("avatar", "👤")).write(user_input)
-    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    # 先查该生的历史薄弱点
+    history_data = supabase.table("weakness_log").select("knowledge_point").eq(
+        "student_id", st.session_state.student_id
+    ).execute()
+    if history_data.data:
+        weakness_list = list(set([row["knowledge_point"] for row in history_data.data]))
+        weakness_text = "、".join(weakness_list)
+    else:
+        weakness_text = "暂无记录"
+
+    # 把薄弱点信息拼到学生提问里，再发给AI
+    enhanced_input = f"{user_input}\n\n【系统提示：该生历史薄弱点为{weakness_text}，请结合这些薄弱点给出针对性建议】"
+    st.session_state.messages.append({"role": "user", "content": enhanced_input})
     
     # 调用 AI
     response = client.chat.completions.create(
