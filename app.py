@@ -183,9 +183,6 @@ with st.sidebar:
 
         # ========== 功能1：全班薄弱点排行 ==========
         if st.button("查看全班薄弱点排行"):
-            ...
-        # ========== 功能1：全班薄弱点排行 ==========
-        if st.button("查看全班薄弱点排行"):
             from collections import Counter
             import datetime
             
