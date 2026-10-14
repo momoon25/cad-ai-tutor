@@ -7,6 +7,7 @@ import json, os
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+TEACHER_IDS = ["2024001", "2024002","2024003"]  # 把这里换成你们学校或班级老师的真实学号
 
 # ================= 1. 配置 API =================
 # 把这里的密钥换成你自己的（保留引号）
@@ -73,6 +74,25 @@ def record_weakness(knowledge_point, error_type, learning_habit):
 st.set_page_config(page_title="CAD AI伴学", layout="wide")
 st.title("《建筑工程CAD》AI伴学智能体")
 
+# 根据角色显示不同欢迎语（只有登录后才显示）
+if st.session_state.get("student_id"):  # 判断学生是否已登录
+    if st.session_state.get("role") == "teacher":
+        st.markdown("""
+            <div style="background-color:#e8f4f8; padding:15px; border-radius:10px; border-left: 5px solid #2196F3;">
+                <h3 style="margin:0; color:#0d47a1;">👨‍🏫 老师，您好！</h3>
+                <p style="margin:5px 0 0 0; color:#555;">欢迎进入教师控制台。现在您可以查看全班学生的学情数据、综合能力雷达图以及上传的评分报告。</p>
+            </div>
+            <br>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div style="background-color:#f0f8ea; padding:15px; border-radius:10px; border-left: 5px solid #4CAF50;">
+                <h3 style="margin:0; color:#2e7d32;">👋 {st.session_state.get('student_name', '同学')}，你好！</h3>
+                <p style="margin:5px 0 0 0; color:#555;">我是你的专属CAD伴学小助手，今天有什么我可以帮你的吗？</p>
+            </div>
+            <br>
+        """, unsafe_allow_html=True)
+    
 # 从链接里读学号
 query_params = st.query_params
 if "student_id" in query_params:
@@ -104,11 +124,19 @@ if "student_id" not in st.session_state or not st.session_state.student_id:
             st.session_state.student_id = student_id
             st.session_state.student_name = student_name
             st.session_state.avatar = selected_avatar  # 把选的头像存起来，后面聊天界面会用到
-            st.query_params["student_id"] = student_id
-            st.rerun()
+        
+        # 判断角色并存入 session_state
+        if student_id in TEACHER_IDS:
+            st.session_state.role = "teacher"
         else:
-            st.warning("学号和姓名都不能为空哦！")
+            st.session_state.role = "student"
+            
+        st.query_params["student_id"] = student_id
+        st.rerun()
+    else:
+        st.warning("学号和姓名都不能为空哦！")
     st.stop()
+    
 
 # 侧边栏：雷达图
 with st.sidebar:
@@ -145,8 +173,12 @@ with st.sidebar:
             )
             st.info(response.choices[0].message.content)
                 
-    if teacher_pwd == "teacher123":
-        st.success("教师模式已开启")
+        # ========== 教师密码验证 ==========
+        if teacher_pwd == "teacher123" and st.session_state.get("role") != "teacher":
+            st.session_state.role = "teacher"
+            st.rerun()  # 强制刷新，让主界面立刻变成老师视角
+        elif teacher_pwd:
+            st.error("密码错误")
         
 
         # ========== 功能0：中望评分全班分析 ==========
@@ -617,18 +649,18 @@ for msg in st.session_state.messages:
             st.chat_message(msg["role"], avatar=st.session_state.get("avatar", "👤")).write(msg["content"])
 
 # 动态显示欢迎语
-st.success(f"你好，{st.session_state.get('student_name', '同学')}！今天想画点什么？如果不知道怎么问，可以看看下面的示例👇")
+st.write("💡 不知道怎么问？看看下面的示例吧👇")
 
-# 示例提问引导
-with st.expander("💡 不知道怎么问？点这里看看示例吧"):
+with st.expander("点这里展开示例提问"):
     st.markdown("""
     - 轴网标注一键生成的命令怎么用？
     - 我画墙体时总是断开对不上，怎么办？
     - 图层锁定了怎么解锁？
     - 尺寸标注的样式怎么统一修改？
-    -我的‘图纸校审’和‘图框与输出’得分偏低。我想要强化这两个薄弱点，能给我布置一套具体的实操任务单吗？
-    -请根据我目前的综合能力分析，如果我想参加技能大赛，你能给我一套有针对性的训练任务吗？
+    - 我的‘图纸校审’和‘图框与输出’得分偏低。我想要强化这两个薄弱点，能给我布置一套具体的实操任务单吗？
+    - 请根据我目前的综合能力分析，如果我想参加技能大赛，你能给我一套有针对性的训练任务吗？
     """)
+
 
 if user_input := st.chat_input("问一个CAD问题..."):
     st.chat_message("user", avatar=st.session_state.get("avatar", "👤")).write(user_input)
